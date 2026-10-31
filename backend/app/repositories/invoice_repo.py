@@ -20,8 +20,10 @@ class InvoiceRepository:
             selectinload(Invoice.payments),
         )
 
-    async def get_by_id(self, invoice_id: uuid.UUID) -> Optional[Invoice]:
+    async def get_by_id(self, invoice_id: uuid.UUID, for_update: bool = False) -> Optional[Invoice]:
         query = self._base_query().where(Invoice.id == invoice_id)
+        if for_update:
+            query = query.with_for_update()
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 

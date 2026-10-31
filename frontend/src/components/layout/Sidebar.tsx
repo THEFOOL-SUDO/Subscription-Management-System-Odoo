@@ -131,12 +131,12 @@ export const Sidebar: React.FC = () => {
 
       {/* Footer Info & Scheduler Trigger */}
       <div className="p-4 border-t border-slate-100 space-y-2">
-        {role !== "CUSTOMER" && (
+        {role !== "CUSTOMER" ? (
           <div>
             <button
               onClick={handleRunBilling}
               disabled={isRunningBilling}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-xs disabled:opacity-50 active:scale-[0.98]"
             >
               {isRunningBilling ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -150,6 +150,16 @@ export const Sidebar: React.FC = () => {
                 {billingMessage}
               </p>
             )}
+          </div>
+        ) : (
+          <div className="bg-emerald-50/80 rounded-lg p-2.5 border border-emerald-200/60">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Customer Self-Service</span>
+            </div>
+            <p className="text-[10px] text-emerald-700 mt-0.5 leading-snug">
+              Securely isolated billing portal
+            </p>
           </div>
         )}
 

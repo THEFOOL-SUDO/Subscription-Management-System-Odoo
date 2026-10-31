@@ -128,9 +128,9 @@ export const InvoicesListPage: React.FC = () => {
 
       {/* Invoices Table */}
       <Card>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[700px] overflow-y-auto">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 border-b border-slate-200/80 text-xs uppercase font-semibold text-slate-500 tracking-wider">
+            <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500 tracking-wider">
               <tr>
                 <th className="py-3 px-4">Invoice #</th>
                 <th className="py-3 px-4">Customer</th>

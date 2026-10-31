@@ -204,9 +204,9 @@ export const ProductsListPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[700px] overflow-y-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/75 border-b border-slate-200/80 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Product</th>
                   <th className="py-3 px-4">SKU</th>

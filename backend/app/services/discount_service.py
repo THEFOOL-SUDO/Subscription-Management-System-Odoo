@@ -147,6 +147,21 @@ class DiscountService:
                 message=f"Minimum purchase amount of ₹{rule.min_purchase_amount} required to use this code.",
             )
 
+        if rule.min_quantity and req.quantity is not None and req.quantity < rule.min_quantity:
+            return DiscountValidateResponse(
+                is_valid=False,
+                code=req.code,
+                message=f"Minimum purchase quantity of {rule.min_quantity} items required to use this code.",
+            )
+
+        if rule.scope == "PRODUCT" and rule.product_id:
+            if not req.product_ids or rule.product_id not in req.product_ids:
+                return DiscountValidateResponse(
+                    is_valid=False,
+                    code=req.code,
+                    message="This discount code is restricted to a specific product not included in this purchase.",
+                )
+
         # Calculate discount amount
         if rule.discount_type == DiscountType.PERCENTAGE.value:
             calc = (req.amount * (rule.discount_value / Decimal("100"))).quantize(Decimal("0.0001"))

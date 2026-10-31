@@ -1,44 +1,82 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/toast";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageSkeletonLoader } from "@/components/ui/PageSkeletonLoader";
 
-// Auth Pages
+// Synchronous Public Auth Pages for instant first-load
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 
-// Dashboard Pages
-import { AdminDashboard } from "@/pages/dashboard/AdminDashboard";
-import { StaffDashboard } from "@/pages/dashboard/StaffDashboard";
-import { CustomerPortal } from "@/pages/dashboard/CustomerPortal";
-import { UserManagementPage } from "@/pages/dashboard/UserManagementPage";
-import { AuditLogsPage } from "@/pages/audit/AuditLogsPage";
-import { ProfilePage } from "@/pages/profile/ProfilePage";
+// Lazy-loaded Feature Modules (Code Split Chunks)
+const AdminDashboard = lazy(() =>
+  import("@/pages/dashboard/AdminDashboard").then((m) => ({ default: m.AdminDashboard }))
+);
+const StaffDashboard = lazy(() =>
+  import("@/pages/dashboard/StaffDashboard").then((m) => ({ default: m.StaffDashboard }))
+);
+const CustomerPortal = lazy(() =>
+  import("@/pages/dashboard/CustomerPortal").then((m) => ({ default: m.CustomerPortal }))
+);
+const UserManagementPage = lazy(() =>
+  import("@/pages/dashboard/UserManagementPage").then((m) => ({ default: m.UserManagementPage }))
+);
+const AuditLogsPage = lazy(() =>
+  import("@/pages/audit/AuditLogsPage").then((m) => ({ default: m.AuditLogsPage }))
+);
+const ProfilePage = lazy(() =>
+  import("@/pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage }))
+);
 
-// Product & Plan Pages
-import { ProductsListPage } from "@/pages/products/ProductsListPage";
-import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
-import { PlansListPage } from "@/pages/plans/PlansListPage";
-import { PlanDetailsPage } from "@/pages/plans/PlanDetailsPage";
-import { CataloguePage } from "@/pages/catalogue/CataloguePage";
+const ProductsListPage = lazy(() =>
+  import("@/pages/products/ProductsListPage").then((m) => ({ default: m.ProductsListPage }))
+);
+const ProductDetailsPage = lazy(() =>
+  import("@/pages/products/ProductDetailsPage").then((m) => ({ default: m.ProductDetailsPage }))
+);
+const PlansListPage = lazy(() =>
+  import("@/pages/plans/PlansListPage").then((m) => ({ default: m.PlansListPage }))
+);
+const PlanDetailsPage = lazy(() =>
+  import("@/pages/plans/PlanDetailsPage").then((m) => ({ default: m.PlanDetailsPage }))
+);
+const CataloguePage = lazy(() =>
+  import("@/pages/catalogue/CataloguePage").then((m) => ({ default: m.CataloguePage }))
+);
 
-// Phase 3 Pages: Customer, Subscription, Invoicing
-import { CustomersListPage } from "@/pages/customers/CustomersListPage";
-import { CustomerDetailsPage } from "@/pages/customers/CustomerDetailsPage";
-import { SubscriptionsListPage } from "@/pages/subscriptions/SubscriptionsListPage";
-import { SubscriptionDetailsPage } from "@/pages/subscriptions/SubscriptionDetailsPage";
-import { InvoicesListPage } from "@/pages/invoices/InvoicesListPage";
-import { InvoiceDetailsPage } from "@/pages/invoices/InvoiceDetailsPage";
+const CustomersListPage = lazy(() =>
+  import("@/pages/customers/CustomersListPage").then((m) => ({ default: m.CustomersListPage }))
+);
+const CustomerDetailsPage = lazy(() =>
+  import("@/pages/customers/CustomerDetailsPage").then((m) => ({ default: m.CustomerDetailsPage }))
+);
+const SubscriptionsListPage = lazy(() =>
+  import("@/pages/subscriptions/SubscriptionsListPage").then((m) => ({ default: m.SubscriptionsListPage }))
+);
+const SubscriptionDetailsPage = lazy(() =>
+  import("@/pages/subscriptions/SubscriptionDetailsPage").then((m) => ({ default: m.SubscriptionDetailsPage }))
+);
+const InvoicesListPage = lazy(() =>
+  import("@/pages/invoices/InvoicesListPage").then((m) => ({ default: m.InvoicesListPage }))
+);
+const InvoiceDetailsPage = lazy(() =>
+  import("@/pages/invoices/InvoiceDetailsPage").then((m) => ({ default: m.InvoiceDetailsPage }))
+);
 
-// Commercial Elevation Pages
-import { QuotationTemplatesPage } from "@/pages/quotations/QuotationTemplatesPage";
-import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
-import { TaxSettingsPage } from "@/pages/taxes/TaxSettingsPage";
+const QuotationTemplatesPage = lazy(() =>
+  import("@/pages/quotations/QuotationTemplatesPage").then((m) => ({ default: m.QuotationTemplatesPage }))
+);
+const DiscountsPage = lazy(() =>
+  import("@/pages/discounts/DiscountsPage").then((m) => ({ default: m.DiscountsPage }))
+);
+const TaxSettingsPage = lazy(() =>
+  import("@/pages/taxes/TaxSettingsPage").then((m) => ({ default: m.TaxSettingsPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,7 +109,7 @@ export const App: React.FC = () => {
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-              {/* Protected Application Layout */}
+              {/* Protected Application Layout with Suspense Boundary */}
               <Route
                 element={
                   <ProtectedRoute>
@@ -86,7 +124,9 @@ export const App: React.FC = () => {
                   path="/admin"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN"]}>
-                      <AdminDashboard />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <AdminDashboard />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -94,7 +134,9 @@ export const App: React.FC = () => {
                   path="/admin/users"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN"]}>
-                      <UserManagementPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <UserManagementPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -104,7 +146,9 @@ export const App: React.FC = () => {
                   path="/staff"
                   element={
                     <ProtectedRoute allowedRoles={["STAFF", "ADMIN"]}>
-                      <StaffDashboard />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <StaffDashboard />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -118,7 +162,9 @@ export const App: React.FC = () => {
                   path="/portal"
                   element={
                     <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "STAFF"]}>
-                      <CustomerPortal />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <CustomerPortal />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -136,7 +182,9 @@ export const App: React.FC = () => {
                   path="/catalogue"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <CataloguePage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <CataloguePage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -146,7 +194,9 @@ export const App: React.FC = () => {
                   path="/products"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <ProductsListPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <ProductsListPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -154,7 +204,9 @@ export const App: React.FC = () => {
                   path="/products/:id"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <ProductDetailsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <ProductDetailsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -164,7 +216,9 @@ export const App: React.FC = () => {
                   path="/plans"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <PlansListPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <PlansListPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -172,7 +226,9 @@ export const App: React.FC = () => {
                   path="/plans/:id"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <PlanDetailsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <PlanDetailsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -182,7 +238,9 @@ export const App: React.FC = () => {
                   path="/customers"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <CustomersListPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <CustomersListPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -190,7 +248,9 @@ export const App: React.FC = () => {
                   path="/customers/:id"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <CustomerDetailsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <CustomerDetailsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -200,7 +260,9 @@ export const App: React.FC = () => {
                   path="/subscriptions"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <SubscriptionsListPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <SubscriptionsListPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -208,7 +270,9 @@ export const App: React.FC = () => {
                   path="/subscriptions/:id"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <SubscriptionDetailsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <SubscriptionDetailsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -218,7 +282,9 @@ export const App: React.FC = () => {
                   path="/invoices"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <InvoicesListPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <InvoicesListPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -226,7 +292,9 @@ export const App: React.FC = () => {
                   path="/invoices/:id"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <InvoiceDetailsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <InvoiceDetailsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -236,7 +304,9 @@ export const App: React.FC = () => {
                   path="/quotations"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
-                      <QuotationTemplatesPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <QuotationTemplatesPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -244,7 +314,9 @@ export const App: React.FC = () => {
                   path="/discounts"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <DiscountsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <DiscountsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -252,7 +324,9 @@ export const App: React.FC = () => {
                   path="/taxes"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <TaxSettingsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <TaxSettingsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
@@ -262,13 +336,22 @@ export const App: React.FC = () => {
                   path="/audit-logs"
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
-                      <AuditLogsPage />
+                      <Suspense fallback={<PageSkeletonLoader />}>
+                        <AuditLogsPage />
+                      </Suspense>
                     </ProtectedRoute>
                   }
                 />
 
                 {/* User Profile (All Authenticated Users) */}
-                <Route path="/profile" element={<ProfilePage />} />
+                <Route
+                  path="/profile"
+                  element={
+                    <Suspense fallback={<PageSkeletonLoader />}>
+                      <ProfilePage />
+                    </Suspense>
+                  }
+                />
               </Route>
 
               {/* Catch-all */}

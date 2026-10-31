@@ -116,9 +116,10 @@ export const DiscountsPage: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-              <tr>
+          <div className="overflow-x-auto max-h-[700px] overflow-y-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                <tr>
                 <th className="px-5 py-3">Code & Name</th>
                 <th className="px-5 py-3">Discount Type</th>
                 <th className="px-5 py-3">Value</th>
@@ -179,6 +180,7 @@ export const DiscountsPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -45,6 +45,8 @@ export const SubscriptionsListPage: React.FC = () => {
         return "success";
       case "CONFIRMED":
         return "info";
+      case "PAUSED":
+        return "warning";
       case "QUOTATION":
         return "warning";
       case "DRAFT":
@@ -59,6 +61,7 @@ export const SubscriptionsListPage: React.FC = () => {
   const statusTabs: Array<SubscriptionStatus | "ALL"> = [
     "ALL",
     "ACTIVE",
+    "PAUSED",
     "CONFIRMED",
     "QUOTATION",
     "DRAFT",
@@ -124,9 +127,9 @@ export const SubscriptionsListPage: React.FC = () => {
 
       {/* Subscriptions Table */}
       <Card>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[700px] overflow-y-auto">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 border-b border-slate-200/80 text-xs uppercase font-semibold text-slate-500 tracking-wider">
+            <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500 tracking-wider">
               <tr>
                 <th className="py-3 px-4">Subscription #</th>
                 <th className="py-3 px-4">Customer</th>

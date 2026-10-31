@@ -24,10 +24,17 @@ export const discountsApi = {
     return response.data;
   },
 
-  validateDiscount: async (code: string, amount: number | string): Promise<DiscountValidateResponse> => {
+  validateDiscount: async (
+    code: string,
+    amount: number | string,
+    quantity?: number,
+    productIds?: string[]
+  ): Promise<DiscountValidateResponse> => {
     const response = await apiClient.post<DiscountValidateResponse>("/api/v1/discounts/validate", {
       code,
       amount,
+      quantity,
+      product_ids: productIds,
     });
     return response.data;
   },

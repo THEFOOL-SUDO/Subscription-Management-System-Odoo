@@ -40,6 +40,7 @@ class DiscountRuleUpdate(BaseModel):
 class DiscountValidateRequest(BaseModel):
     code: str
     amount: Decimal
+    quantity: Optional[int] = None
     product_ids: Optional[List[uuid.UUID]] = None
 
 

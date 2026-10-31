@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException, status
 import jwt
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.invoice import InvoicePaymentStatus, InvoiceStatus
@@ -46,7 +47,7 @@ class DemoPaymentService:
         invoice_id: uuid.UUID,
         current_user: User,
     ) -> CheckoutSessionResponse:
-        invoice = await self.invoice_repo.get_by_id(invoice_id)
+        invoice = await self.invoice_repo.get_by_id(invoice_id, for_update=False)
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -142,9 +143,34 @@ class DemoPaymentService:
                     demo_disclaimer=DEMO_DISCLAIMER,
                 )
 
-        invoice = await self.invoice_repo.get_by_id(invoice_id)
+        invoice = await self.invoice_repo.get_by_id(invoice_id, for_update=True)
         if not invoice:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+
+        # Re-check idempotency under row lock
+        if data.idempotency_key:
+            existing_txn = await self.txn_repo.get_by_idempotency_key(data.idempotency_key)
+            if existing_txn:
+                return PaymentTransactionResponse(
+                    id=existing_txn.id,
+                    transaction_reference=existing_txn.transaction_reference,
+                    invoice_id=existing_txn.invoice_id,
+                    customer_id=existing_txn.customer_id,
+                    amount=existing_txn.amount,
+                    currency=existing_txn.currency,
+                    provider=existing_txn.provider,
+                    payment_method=existing_txn.payment_method,
+                    status=existing_txn.status,
+                    idempotency_key=existing_txn.idempotency_key,
+                    metadata_json=existing_txn.metadata_json,
+                    created_at=existing_txn.created_at,
+                    updated_at=existing_txn.updated_at,
+                    invoice_number=invoice.invoice_number,
+                    invoice_status=invoice.status.value,
+                    invoice_payment_status=invoice.payment_status.value,
+                    remaining_balance=invoice.balance_due,
+                    demo_disclaimer=DEMO_DISCLAIMER,
+                )
 
         if current_user.role == UserRole.CUSTOMER:
             if not invoice.customer or invoice.customer.user_id != current_user.id:
@@ -304,7 +330,38 @@ class DemoPaymentService:
             idempotency_key=data.idempotency_key,
             metadata_json={**metadata, "payment_number": pay_number, "is_full_payment": is_full_payment},
         )
-        created_txn = await self.txn_repo.create(txn)
+        try:
+            created_txn = await self.txn_repo.create(txn)
+        except IntegrityError:
+            await self.session.rollback()
+            if data.idempotency_key:
+                existing_txn = await self.txn_repo.get_by_idempotency_key(data.idempotency_key)
+                if existing_txn:
+                    inv_ref = await self.invoice_repo.get_by_id(existing_txn.invoice_id)
+                    return PaymentTransactionResponse(
+                        id=existing_txn.id,
+                        transaction_reference=existing_txn.transaction_reference,
+                        invoice_id=existing_txn.invoice_id,
+                        customer_id=existing_txn.customer_id,
+                        amount=existing_txn.amount,
+                        currency=existing_txn.currency,
+                        provider=existing_txn.provider,
+                        payment_method=existing_txn.payment_method,
+                        status=existing_txn.status,
+                        idempotency_key=existing_txn.idempotency_key,
+                        metadata_json=existing_txn.metadata_json,
+                        created_at=existing_txn.created_at,
+                        updated_at=existing_txn.updated_at,
+                        invoice_number=inv_ref.invoice_number if inv_ref else None,
+                        invoice_status=inv_ref.status.value if inv_ref else None,
+                        invoice_payment_status=inv_ref.payment_status.value if inv_ref else None,
+                        remaining_balance=inv_ref.balance_due if inv_ref else None,
+                        demo_disclaimer=DEMO_DISCLAIMER,
+                    )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Transaction collision detected. Please retry.",
+            )
 
         # Lifecycle Hook: If initial invoice is fully paid and subscription is CONFIRMED, promote to ACTIVE
         if is_full_payment and invoice.subscription_id:
