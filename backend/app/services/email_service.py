@@ -1,0 +1,112 @@
+import logging
+from email.message import EmailMessage
+import aiosmtplib
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class EmailService:
+    @staticmethod
+    async def send_email(
+        recipient_email: str,
+        subject: str,
+        html_content: str,
+        text_content: str = "",
+    ) -> bool:
+        """Send an email asynchronously via configured SMTP/Mailpit server."""
+        try:
+            message = EmailMessage()
+            message["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
+            message["To"] = recipient_email
+            message["Subject"] = subject
+
+            if text_content:
+                message.set_content(text_content)
+                message.add_alternative(html_content, subtype="html")
+            else:
+                message.set_content(html_content, subtype="html")
+
+            await aiosmtplib.send(
+                message,
+                hostname=settings.SMTP_HOST,
+                port=settings.SMTP_PORT,
+                username=settings.SMTP_USER or None,
+                password=settings.SMTP_PASSWORD or None,
+                use_tls=False,
+                start_tls=False,
+                timeout=5.0,
+            )
+            logger.info("Successfully dispatched email to %s (Subject: %s)", recipient_email, subject)
+            return True
+        except Exception as exc:
+            logger.warning("Failed to dispatch email to %s via SMTP (%s:%s): %s",
+                           recipient_email, settings.SMTP_HOST, settings.SMTP_PORT, exc)
+            return False
+
+    @classmethod
+    async def send_password_reset_email(cls, recipient_email: str, reset_token: str, full_name: str) -> bool:
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        subject = "Reset your Brightloop password"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; }}
+            .container {{ max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px; }}
+            .button {{ display: inline-block; padding: 12px 24px; background-color: #0f172a; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 16px; margin-bottom: 16px; }}
+            .footer {{ font-size: 12px; color: #64748b; margin-top: 24px; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2 style="margin-top:0; color: #0f172a;">Password Reset Request</h2>
+            <p>Hello {full_name},</p>
+            <p>We received a request to reset the password for your Brightloop account. Click the button below to choose a new password:</p>
+            <p style="text-align: center;">
+              <a href="{reset_url}" class="button">Reset Password</a>
+            </p>
+            <p>This link is valid for <strong>{settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes</strong> and can only be used once.</p>
+            <p>If you didn't request a password reset, you can safely ignore this email; your account remains secure.</p>
+            <div class="footer">
+              <p>Brightloop Software — Subscription Management Platform</p>
+              <p>If the button doesn't work, copy and paste this URL into your browser:<br><span style="word-break: break-all; color: #2563eb;">{reset_url}</span></p>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+        text_content = f"Hello {full_name},\n\nReset your Brightloop password using this link:\n{reset_url}\n\nThis link expires in {settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes."
+        return await cls.send_email(recipient_email, subject, html_content, text_content)
+
+    @classmethod
+    async def send_welcome_email(cls, recipient_email: str, full_name: str) -> bool:
+        subject = "Welcome to Brightloop Software"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; }}
+            .container {{ max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px; }}
+            .footer {{ font-size: 12px; color: #64748b; margin-top: 24px; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2 style="margin-top:0; color: #0f172a;">Welcome to Brightloop!</h2>
+            <p>Hello {full_name},</p>
+            <p>Your customer account has been created. You now have access to your personal self-service portal to view quotations, manage subscriptions, and inspect invoices.</p>
+            <p>Visit <a href="{settings.FRONTEND_URL}" style="color: #2563eb;">{settings.FRONTEND_URL}</a> to log in to your account.</p>
+            <div class="footer">
+              <p>Brightloop Software — Subscription Management Platform</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+        text_content = f"Hello {full_name},\n\nWelcome to Brightloop! Log in to your account at: {settings.FRONTEND_URL}"
+        return await cls.send_email(recipient_email, subject, html_content, text_content)

@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: brightloop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-brightloop_db}
+      POSTGRES_USER: ${POSTGRES_USER:-brightloop_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brightloop_secret_password}
+    ports:
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - brightloop_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-brightloop_user} -d ${POSTGRES_DB:-brightloop_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: brightloop-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6385}:6379"
+    volumes:
+      - brightloop_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: brightloop-mailpit
+    restart: unless-stopped
+    ports:
+      - "8028:8025" # Web UI
+      - "1028:1025" # SMTP Port
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: "" # In-memory database
+
+volumes:
+  brightloop_pgdata:
+    name: brightloop_pgdata
+  brightloop_redisdata:
+    name: brightloop_redisdata
