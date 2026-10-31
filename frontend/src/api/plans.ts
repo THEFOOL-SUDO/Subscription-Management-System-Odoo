@@ -6,6 +6,8 @@ import {
   PlanProductCreateInput,
   PlanProductUpdateInput,
   PlanStatus,
+  Product,
+  SubscriptionPlan,
   SubscriptionPlanCreateInput,
   SubscriptionPlanDetail,
   SubscriptionPlanListResponse,
@@ -95,6 +97,18 @@ export const plansApi = {
   ): Promise<MessageResponse> => {
     const response = await apiClient.delete<MessageResponse>(
       `/api/v1/plans/${planId}/products/${lineItemId}`
+    );
+    return response.data;
+  },
+
+  setupCatalogue: async (): Promise<any> => {
+    const response = await apiClient.post<any>("/api/v1/plans/catalogue/setup");
+    return response.data;
+  },
+
+  getCatalogueItems: async (): Promise<{ plans: SubscriptionPlan[]; addons: Product[] }> => {
+    const response = await apiClient.get<{ plans: SubscriptionPlan[]; addons: Product[] }>(
+      "/api/v1/plans/catalogue/items"
     );
     return response.data;
   },

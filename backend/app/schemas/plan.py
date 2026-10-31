@@ -166,3 +166,8 @@ class SubscriptionPlanListResponse(BaseModel):
     limit: int
     total_pages: int
 
+
+class CatalogueItemsResponse(BaseModel):
+    plans: List[SubscriptionPlanResponse]
+    addons: List[ProductResponse]
+

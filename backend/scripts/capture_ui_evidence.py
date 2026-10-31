@@ -101,6 +101,27 @@ async def main():
             await asyncio.sleep(1)
             await page.screenshot(path=os.path.join(OUTPUT_DIR, "08_record_payment_modal.png"))
             print("  [✓] Captured 08_record_payment_modal.png")
+            # Close modal
+            await page.click('button:has-text("Cancel")')
+
+        # 10. Subscription Catalogue View (Admin)
+        print("[*] Navigating to Subscription Catalogue...")
+        await page.click("aside >> text=Catalogue")
+        await page.wait_for_selector("text=Subscription & Product Catalogue", timeout=10000)
+        await asyncio.sleep(2)
+        await page.screenshot(path=os.path.join(OUTPUT_DIR, "09_subscription_catalogue_admin.png"))
+        print("  [✓] Captured 09_subscription_catalogue_admin.png")
+
+        # 11. Subscription Creation from Catalogue with prefilled plan
+        print("[*] Opening Create Subscription from Catalogue card...")
+        create_sub_btn = page.locator('button:has-text("Create Subscription")').first
+        if await create_sub_btn.count():
+            await create_sub_btn.click()
+            await page.wait_for_selector('h2:has-text("Create Subscription")', timeout=5000)
+            await asyncio.sleep(1.5)
+            await page.screenshot(path=os.path.join(OUTPUT_DIR, "10_catalogue_prefilled_subscription_modal.png"))
+            print("  [✓] Captured 10_catalogue_prefilled_subscription_modal.png")
+            await page.click('button:has-text("Cancel")')
 
         print("[+] All UI evidence screenshots successfully captured!")
         await browser.close()

@@ -23,6 +23,7 @@ export const Sidebar: React.FC = () => {
 
   const adminNav = [
     { name: "Overview", to: "/admin", icon: LayoutDashboard },
+    { name: "Catalogue", to: "/catalogue", icon: Sparkles },
     { name: "Products", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "Customer Directory", to: "/customers", icon: UserCheck },
@@ -35,6 +36,7 @@ export const Sidebar: React.FC = () => {
 
   const staffNav = [
     { name: "Staff Console", to: "/staff", icon: LayoutDashboard },
+    { name: "Catalogue", to: "/catalogue", icon: Sparkles },
     { name: "Product Catalog", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "Customer Accounts", to: "/customers", icon: UserCheck },
@@ -46,6 +48,7 @@ export const Sidebar: React.FC = () => {
 
   const customerNav = [
     { name: "My Portal", to: "/portal", icon: LayoutDashboard },
+    { name: "Browse Catalogue", to: "/catalogue", icon: Sparkles },
     { name: "My Subscriptions", to: "/subscriptions", icon: CreditCard },
     { name: "My Invoices", to: "/invoices", icon: FileText },
     { name: "Profile & Security", to: "/profile", icon: Settings },

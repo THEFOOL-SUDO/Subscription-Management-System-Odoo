@@ -15,6 +15,7 @@ interface SubscriptionCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   preselectedCustomerId?: string;
+  preselectedPlanId?: string;
   onSuccess?: (subId: string) => void;
 }
 
@@ -22,13 +23,19 @@ export const SubscriptionCreateModal: React.FC<SubscriptionCreateModalProps> = (
   isOpen,
   onClose,
   preselectedCustomerId,
+  preselectedPlanId,
   onSuccess,
 }) => {
   const { success, error } = useToast();
   const queryClient = useQueryClient();
 
   const [customerId, setCustomerId] = useState(preselectedCustomerId || "");
-  const [planId, setPlanId] = useState("");
+  const [planId, setPlanId] = useState(preselectedPlanId || "");
+
+  React.useEffect(() => {
+    if (preselectedCustomerId) setCustomerId(preselectedCustomerId);
+    if (preselectedPlanId) setPlanId(preselectedPlanId);
+  }, [preselectedCustomerId, preselectedPlanId, isOpen]);
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split("T")[0]
   );

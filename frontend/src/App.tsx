@@ -25,6 +25,7 @@ import { ProductsListPage } from "@/pages/products/ProductsListPage";
 import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
 import { PlansListPage } from "@/pages/plans/PlansListPage";
 import { PlanDetailsPage } from "@/pages/plans/PlanDetailsPage";
+import { CataloguePage } from "@/pages/catalogue/CataloguePage";
 
 // Phase 3 Pages: Customer, Subscription, Invoicing
 import { CustomersListPage } from "@/pages/customers/CustomersListPage";
@@ -123,6 +124,16 @@ export const App: React.FC = () => {
                 <Route
                   path="/portal/invoices"
                   element={<Navigate to="/invoices" replace />}
+                />
+
+                {/* Subscription & Product Catalogue (Admin, Staff, Customer) */}
+                <Route
+                  path="/catalogue"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <CataloguePage />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Product Catalog (Admin & Staff) */}

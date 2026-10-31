@@ -6,9 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_client_info, get_current_user, require_roles
 from app.models.plan import BillingInterval, PlanStatus
+from app.models.product import ProductType
 from app.models.user import User, UserRole
+from app.repositories.product_repo import ProductRepository
 from app.schemas.common import MessageResponse
 from app.schemas.plan import (
+    CatalogueItemsResponse,
     PlanProductCreate,
     PlanProductResponse,
     PlanProductUpdate,
@@ -22,6 +25,7 @@ from app.schemas.plan import (
 from app.schemas.product import ProductResponse, ProductVariantResponse
 from app.services.plan_service import PlanService
 from app.services.pricing_service import PricingService
+from app.services.catalogue_service import CatalogueService
 
 router = APIRouter(prefix="/plans", tags=["Subscription Plan Management"])
 
@@ -99,6 +103,44 @@ async def list_plans(
         limit=limit,
         total_pages=total_pages,
     )
+
+
+@router.get("/catalogue/items", response_model=CatalogueItemsResponse)
+async def get_catalogue_items(
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF, UserRole.CUSTOMER)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Unified catalogue items endpoint accessible to all authenticated roles (Admin, Staff, Customer).
+    Returns all active subscription plans and active add-on products from PostgreSQL.
+    """
+    svc = PlanService(db)
+    pricing_svc = PricingService(db)
+    prod_repo = ProductRepository(db)
+
+    plans, _ = await svc.list_plans(status_filter=PlanStatus.ACTIVE, limit=100)
+    addons, _ = await prod_repo.list_products(
+        product_type=ProductType.ADDON, is_active=True, is_archived=False, limit=100
+    )
+
+    return CatalogueItemsResponse(
+        plans=[_to_plan_response(p, pricing_svc) for p in plans],
+        addons=[ProductResponse.model_validate(p) for p in addons],
+    )
+
+
+@router.post("/catalogue/setup", status_code=status.HTTP_200_OK)
+async def setup_default_catalogue(
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Idempotently populate the default Brightloop software plans and add-on catalogue in PostgreSQL.
+    Admin only. Preserves all existing records and customized prices.
+    """
+    svc = CatalogueService(db)
+    result = await svc.ensure_default_catalogue(admin_user=current_user)
+    return result
 
 
 @router.post("", response_model=SubscriptionPlanDetailResponse, status_code=status.HTTP_201_CREATED)
