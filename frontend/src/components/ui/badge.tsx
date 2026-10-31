@@ -3,7 +3,19 @@ import { cn } from "@/lib/utils";
 import { UserRole } from "@/types";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "secondary" | "outline" | "success" | "warning" | "danger" | "admin" | "staff" | "customer";
+  variant?:
+    | "default"
+    | "secondary"
+    | "outline"
+    | "success"
+    | "warning"
+    | "danger"
+    | "admin"
+    | "staff"
+    | "customer"
+    | "info"
+    | "neutral"
+    | "destructive";
 }
 
 export const Badge: React.FC<BadgeProps> = ({ className, variant = "default", ...props }) => {
@@ -14,6 +26,9 @@ export const Badge: React.FC<BadgeProps> = ({ className, variant = "default", ..
     success: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     warning: "bg-amber-50 text-amber-700 border border-amber-200",
     danger: "bg-rose-50 text-rose-700 border border-rose-200",
+    destructive: "bg-rose-50 text-rose-700 border border-rose-200",
+    info: "bg-blue-50 text-blue-700 border border-blue-200",
+    neutral: "bg-slate-100 text-slate-700 border border-slate-200",
     admin: "bg-purple-50 text-purple-700 border border-purple-200 font-semibold",
     staff: "bg-blue-50 text-blue-700 border border-blue-200 font-semibold",
     customer: "bg-slate-100 text-slate-700 border border-slate-200 font-semibold",

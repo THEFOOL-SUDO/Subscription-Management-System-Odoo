@@ -82,6 +82,44 @@ class EmailService:
         return await cls.send_email(recipient_email, subject, html_content, text_content)
 
     @classmethod
+    async def send_customer_activation_email(cls, recipient_email: str, reset_token: str, full_name: str) -> bool:
+        activation_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        subject = "Welcome to Brightloop — Set Up Your Account"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; }}
+            .container {{ max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px; }}
+            .button {{ display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 16px; margin-bottom: 16px; }}
+            .footer {{ font-size: 12px; color: #64748b; margin-top: 24px; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2 style="margin-top:0; color: #0f172a;">Welcome to Brightloop!</h2>
+            <p>Hello {full_name},</p>
+            <p>Your customer profile has been created in the Brightloop Subscription Management Platform. You can access your invoices, manage active subscriptions, and view quotations through your self-service portal.</p>
+            <p>To get started and set your secure password, please click the button below:</p>
+            <p style="text-align: center;">
+              <a href="{activation_url}" class="button">Set Password &amp; Activate Account</a>
+            </p>
+            <p>This activation link is valid for <strong>24 hours</strong> and can only be used once.</p>
+            <p>If you have any questions or did not expect this invitation, please contact your account manager.</p>
+            <div class="footer">
+              <p>Brightloop Software — Subscription Management Platform</p>
+              <p>If the button doesn't work, copy and paste this URL into your browser:<br><span style="word-break: break-all; color: #2563eb;">{activation_url}</span></p>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+        text_content = f"Hello {full_name},\n\nWelcome to Brightloop! Your customer profile has been created.\nSet your secure password using this link:\n{activation_url}\n\nThis link is valid for 24 hours."
+        return await cls.send_email(recipient_email, subject, html_content, text_content)
+
+    @classmethod
     async def send_welcome_email(cls, recipient_email: str, full_name: str) -> bool:
         subject = "Welcome to Brightloop Software"
         html_content = f"""

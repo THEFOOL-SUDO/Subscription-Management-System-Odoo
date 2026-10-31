@@ -26,6 +26,14 @@ import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
 import { PlansListPage } from "@/pages/plans/PlansListPage";
 import { PlanDetailsPage } from "@/pages/plans/PlanDetailsPage";
 
+// Phase 3 Pages: Customer, Subscription, Invoicing
+import { CustomersListPage } from "@/pages/customers/CustomersListPage";
+import { CustomerDetailsPage } from "@/pages/customers/CustomerDetailsPage";
+import { SubscriptionsListPage } from "@/pages/subscriptions/SubscriptionsListPage";
+import { SubscriptionDetailsPage } from "@/pages/subscriptions/SubscriptionDetailsPage";
+import { InvoicesListPage } from "@/pages/invoices/InvoicesListPage";
+import { InvoiceDetailsPage } from "@/pages/invoices/InvoiceDetailsPage";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -96,11 +104,7 @@ export const App: React.FC = () => {
                 />
                 <Route
                   path="/staff/customers"
-                  element={
-                    <ProtectedRoute allowedRoles={["STAFF", "ADMIN"]}>
-                      <StaffDashboard />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/customers" replace />}
                 />
 
                 {/* Customer Portal Shell Routes */}
@@ -114,19 +118,11 @@ export const App: React.FC = () => {
                 />
                 <Route
                   path="/portal/subscriptions"
-                  element={
-                    <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "STAFF"]}>
-                      <CustomerPortal />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/subscriptions" replace />}
                 />
                 <Route
                   path="/portal/invoices"
-                  element={
-                    <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "STAFF"]}>
-                      <CustomerPortal />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/invoices" replace />}
                 />
 
                 {/* Product Catalog (Admin & Staff) */}
@@ -161,6 +157,60 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
                       <PlanDetailsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Phase 3: Customer Management (Admin & Staff) */}
+                <Route
+                  path="/customers"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <CustomersListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customers/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <CustomerDetailsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Phase 3: Subscriptions (All Roles with server-side isolation) */}
+                <Route
+                  path="/subscriptions"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <SubscriptionsListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/subscriptions/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <SubscriptionDetailsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Phase 3: Invoices & Payments (All Roles with server-side isolation) */}
+                <Route
+                  path="/invoices"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <InvoicesListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <InvoiceDetailsPage />
                     </ProtectedRoute>
                   }
                 />

@@ -48,6 +48,40 @@ from app.schemas.pricing import (
     PriceCalculationItemResult,
     PriceCalculationResponse,
 )
+from app.schemas.customer import (
+    CustomerBase,
+    CustomerCreate,
+    CustomerUpdate,
+    CustomerResponse,
+    CustomerListResponse,
+)
+from app.schemas.subscription import (
+    SubscriptionItemCreate,
+    SubscriptionItemResponse,
+    SubscriptionStatusHistoryResponse,
+    SubscriptionCreate,
+    SubscriptionStatusTransitionRequest,
+    SubscriptionResponse,
+    SubscriptionListResponse,
+)
+from app.schemas.invoice import (
+    InvoiceItemResponse,
+    InvoiceCreateRequest,
+    InvoiceStatusTransitionRequest,
+    InvoiceResponse,
+    InvoiceListResponse,
+)
+from app.schemas.payment import (
+    PaymentCreateRequest,
+    PaymentResponse,
+    PaymentListResponse,
+)
+from app.schemas.dashboard import (
+    RevenueTrendPoint,
+    RecentPaymentItem,
+    RecentSubscriptionItem,
+    DashboardMetricsResponse,
+)
 
 __all__ = [
     "RegisterRequest",
@@ -91,4 +125,28 @@ __all__ = [
     "PriceCalculationRequest",
     "PriceCalculationItemResult",
     "PriceCalculationResponse",
+    "CustomerBase",
+    "CustomerCreate",
+    "CustomerUpdate",
+    "CustomerResponse",
+    "CustomerListResponse",
+    "SubscriptionItemCreate",
+    "SubscriptionItemResponse",
+    "SubscriptionStatusHistoryResponse",
+    "SubscriptionCreate",
+    "SubscriptionStatusTransitionRequest",
+    "SubscriptionResponse",
+    "SubscriptionListResponse",
+    "InvoiceItemResponse",
+    "InvoiceCreateRequest",
+    "InvoiceStatusTransitionRequest",
+    "InvoiceResponse",
+    "InvoiceListResponse",
+    "PaymentCreateRequest",
+    "PaymentResponse",
+    "PaymentListResponse",
+    "RevenueTrendPoint",
+    "RecentPaymentItem",
+    "RecentSubscriptionItem",
+    "DashboardMetricsResponse",
 ]

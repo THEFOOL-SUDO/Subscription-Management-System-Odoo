@@ -25,6 +25,9 @@ export const Sidebar: React.FC = () => {
     { name: "Overview", to: "/admin", icon: LayoutDashboard },
     { name: "Products", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
+    { name: "Customer Directory", to: "/customers", icon: UserCheck },
+    { name: "Subscriptions", to: "/subscriptions", icon: CreditCard },
+    { name: "Invoices & Billing", to: "/invoices", icon: FileText },
     { name: "User Management", to: "/admin/users", icon: Users },
     { name: "Audit Logs", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
@@ -34,15 +37,17 @@ export const Sidebar: React.FC = () => {
     { name: "Staff Console", to: "/staff", icon: LayoutDashboard },
     { name: "Product Catalog", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
-    { name: "Customer Accounts", to: "/staff/customers", icon: UserCheck },
+    { name: "Customer Accounts", to: "/customers", icon: UserCheck },
+    { name: "Subscriptions", to: "/subscriptions", icon: CreditCard },
+    { name: "Invoices & Billing", to: "/invoices", icon: FileText },
     { name: "Audit Trail", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
   ];
 
   const customerNav = [
     { name: "My Portal", to: "/portal", icon: LayoutDashboard },
-    { name: "Subscriptions", to: "/portal/subscriptions", icon: CreditCard },
-    { name: "Invoices", to: "/portal/invoices", icon: FileText },
+    { name: "My Subscriptions", to: "/subscriptions", icon: CreditCard },
+    { name: "My Invoices", to: "/invoices", icon: FileText },
     { name: "Profile & Security", to: "/profile", icon: Settings },
   ];
 
@@ -77,7 +82,7 @@ export const Sidebar: React.FC = () => {
             end={item.to === "/admin" || item.to === "/staff" || item.to === "/portal"}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 isActive
                   ? "bg-slate-900 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
@@ -94,7 +99,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-slate-100">
         <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
           <p className="text-xs font-semibold text-slate-800">Brightloop Platform</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Phase 2: Products & Plans</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Phase 3: Subscriptions & Billing</p>
         </div>
       </div>
     </aside>

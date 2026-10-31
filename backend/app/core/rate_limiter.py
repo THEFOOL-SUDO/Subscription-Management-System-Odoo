@@ -10,6 +10,16 @@ _memory_store: dict[str, deque[float]] = defaultdict(deque)
 
 async def get_redis_client() -> aioredis.Redis | None:
     global _redis_client
+    if _redis_client is not None:
+        try:
+            await _redis_client.ping()
+        except Exception:
+            try:
+                await _redis_client.aclose()
+            except Exception:
+                pass
+            _redis_client = None
+
     if _redis_client is None:
         try:
             _redis_client = aioredis.from_url(

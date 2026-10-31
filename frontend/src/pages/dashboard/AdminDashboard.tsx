@@ -1,52 +1,48 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { healthApi } from "@/api/health";
-import { usersApi } from "@/api/users";
-import { auditApi } from "@/api/audit";
-import { HealthCheckResponse, AuditLog } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardApi } from "@/api/dashboard";
+import { DashboardMetrics, HealthCheckResponse } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import {
   Users,
-  ShieldAlert,
-  Server,
-  Activity,
-  UserPlus,
+  CreditCard,
+  FileText,
+  IndianRupee,
   ArrowRight,
-  Database,
-  Layers,
+  TrendingUp,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 export const AdminDashboard: React.FC = () => {
   const [health, setHealth] = useState<HealthCheckResponse | null>(null);
-  const [userStats, setUserStats] = useState<{ total: number; staff: number; customers: number }>({
-    total: 0,
-    staff: 0,
-    customers: 0,
-  });
-  const [recentLogs, setRecentLogs] = useState<AuditLog[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [h, u, a] = await Promise.all([
+        const [h, m] = await Promise.all([
           healthApi.check(),
-          usersApi.listUsers({ size: 100 }),
-          auditApi.listAuditLogs({ size: 5 }),
+          dashboardApi.getMetrics(),
         ]);
         setHealth(h);
-        const allUsers = u.items;
-        setUserStats({
-          total: u.total,
-          staff: allUsers.filter((x) => x.role === "STAFF").length,
-          customers: allUsers.filter((x) => x.role === "CUSTOMER").length,
-        });
-        setRecentLogs(a.items);
+        setMetrics(m);
       } catch (err) {
-        console.error("Failed to load admin telemetry", err);
+        console.error("Failed to load admin dashboard telemetry", err);
       } finally {
         setIsLoading(false);
       }
@@ -55,134 +51,264 @@ export const AdminDashboard: React.FC = () => {
     fetchData();
   }, []);
 
+  const chartData = metrics?.revenue_trend.map((pt) => ({
+    name: pt.period,
+    revenue: parseFloat(pt.revenue) || 0,
+    count: pt.payments_count,
+  })) || [];
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/80 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            System Administration
+            Executive Financial & Operations Overview
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Overview of platform identity, user accounts, operational health, and audit trail.
+          <p className="text-sm text-slate-500 mt-1">
+            Real-time business performance calculated directly from PostgreSQL ledgers.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link to="/admin/users">
-            <Button size="sm" variant="outline" className="gap-1.5">
-              <Users className="w-4 h-4" />
-              Manage Users
-            </Button>
-          </Link>
-          <Link to="/admin/users?newStaff=true">
-            <Button size="sm" className="gap-1.5">
-              <UserPlus className="w-4 h-4" />
-              Provision Staff
-            </Button>
-          </Link>
+
+        <div className="flex items-center gap-2">
+          {health?.status === "healthy" ? (
+            <Badge variant="success" className="gap-1.5 py-1 px-2.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Engine Online • DB & Redis Connected
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="gap-1.5 py-1 px-2.5">
+              Service Degraded
+            </Badge>
+          )}
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* KPI Financial Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Accounts
-            </CardTitle>
-            <Users className="h-4 w-4 text-slate-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{isLoading ? "—" : userStats.total}</div>
-            <p className="text-xs text-slate-500 mt-1">Registered identity principals</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Staff Members
-            </CardTitle>
-            <Layers className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{isLoading ? "—" : userStats.staff}</div>
-            <p className="text-xs text-slate-500 mt-1">Operational support accounts</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Customers
-            </CardTitle>
-            <Users className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{isLoading ? "—" : userStats.customers}</div>
-            <p className="text-xs text-slate-500 mt-1">Self-service subscriber accounts</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              System Health
-            </CardTitle>
-            <Activity className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-900 capitalize">
-                {health?.status || "Checking..."}
-              </span>
-              {health?.status === "healthy" ? (
-                <Badge variant="success">Operational</Badge>
-              ) : (
-                <Badge variant="danger">Issues</Badge>
-              )}
+        {/* Total Revenue */}
+        <Card className="hover:shadow-xs transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Revenue Collected
+            </span>
+            <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg">
+              <IndianRupee className="w-4 h-4" />
             </div>
-            <p className="text-xs text-slate-500 mt-1">PostgreSQL & Redis connected</p>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <div>
+                <span className="text-2xl font-bold font-mono text-slate-900">
+                  {formatCurrency(metrics?.revenue_collected || "0", metrics?.currency || "INR")}
+                </span>
+                <p className="text-xs text-emerald-600 flex items-center gap-1 mt-1 font-medium">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Settled into bank accounts
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Active Subscriptions */}
+        <Card className="hover:shadow-xs transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Active Subscriptions
+            </span>
+            <div className="p-2 bg-blue-50 text-blue-700 rounded-lg">
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <div>
+                <span className="text-2xl font-bold font-mono text-slate-900">
+                  {metrics?.active_subscriptions || 0}
+                </span>
+                <p className="text-xs text-slate-500 mt-1">
+                  Recurring active agreements
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Total Customers */}
+        <Card className="hover:shadow-xs transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Customer Accounts
+            </span>
+            <div className="p-2 bg-purple-50 text-purple-700 rounded-lg">
+              <Users className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <div>
+                <span className="text-2xl font-bold font-mono text-slate-900">
+                  {metrics?.total_customers || 0}
+                </span>
+                <p className="text-xs text-slate-500 mt-1">
+                  Registered enterprise clients
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Outstanding Receivables */}
+        <Card className="hover:shadow-xs transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Outstanding Invoices
+            </span>
+            <div className="p-2 bg-amber-50 text-amber-700 rounded-lg">
+              <FileText className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <div>
+                <span className="text-2xl font-bold font-mono text-slate-900">
+                  {formatCurrency(metrics?.outstanding_invoice_amount || "0", metrics?.currency || "INR")}
+                </span>
+                {metrics && metrics.overdue_invoices > 0 ? (
+                  <p className="text-xs text-red-600 flex items-center gap-1 mt-1 font-semibold">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {metrics.overdue_invoices} overdue invoices
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-1">Zero overdue receivables</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Telemetry and Recent Logs Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Recent Audit Trail */}
-        <Card className="lg:col-span-2">
+      {/* Revenue Trend Chart */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-base font-bold text-slate-900">
+              Monthly Revenue Trajectory
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Aggregate collection trend grouped by month from recorded payment receipts.
+            </CardDescription>
+          </div>
+          <Link to="/invoices">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              Billing Ledger <ArrowRight className="w-3 h-3" />
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {chartData.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-lg">
+              <TrendingUp className="w-8 h-8 text-slate-300 mb-2" />
+              <span>No revenue data points recorded yet.</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">
+                Payments recorded against confirmed invoices will populate this trend graph.
+              </span>
+            </div>
+          ) : (
+            <div className="h-64 w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `₹${v}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      borderRadius: "8px",
+                      border: "none",
+                      color: "#fff",
+                      fontSize: "12px",
+                    }}
+                    formatter={(val: any) => [`₹${val}`, "Revenue"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorRev)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Two Column Grid: Recent Payments & Recent Subscriptions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Payments */}
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Recent Audit Trail</CardTitle>
+              <CardTitle className="text-base font-semibold text-slate-800">
+                Recent Payment Settlements
+              </CardTitle>
               <CardDescription className="text-xs">
-                Real-time security events, authentication attempts, and administrative actions.
+                Latest cleared customer payments
               </CardDescription>
             </div>
-            <Link to="/audit-logs">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                View All
-                <ArrowRight className="w-3.5 h-3.5" />
+            <Link to="/invoices">
+              <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
+                View Invoices
               </Button>
             </Link>
           </CardHeader>
           <CardContent>
-            {recentLogs.length === 0 ? (
-              <p className="text-xs text-slate-500 py-6 text-center">No audit records recorded yet.</p>
+            {isLoading ? (
+              <p className="text-xs text-slate-400 py-6 text-center">Loading transactions...</p>
+            ) : metrics?.recent_payments.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center italic">
+                No payments recorded yet.
+              </p>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {recentLogs.map((log) => (
-                  <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-2 w-2 rounded-full bg-slate-400" />
-                      <div>
-                        <span className="font-semibold text-slate-800">{log.action}</span>
-                        <p className="text-slate-500 text-[11px] truncate max-w-xs">
-                          {log.user_email || `User: ${log.user_id || "Anonymous"}`}
-                        </p>
-                      </div>
+              <div className="divide-y divide-slate-100 text-xs">
+                {metrics?.recent_payments.map((p) => (
+                  <div key={p.id} className="py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-900 block">{p.customer_name}</span>
+                      <span className="text-[11px] font-mono text-slate-400">
+                        {p.payment_number} • {p.payment_method}
+                      </span>
                     </div>
-                    <div className="text-right text-slate-400 text-[11px]">
-                      {formatDate(log.created_at)}
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-emerald-600 block">
+                        +{formatCurrency(p.amount, p.currency)}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {formatDate(p.payment_date)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -191,49 +317,52 @@ export const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Right Col: Node Health & Services */}
+        {/* Recent Subscriptions */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Infrastructure Status</CardTitle>
-            <CardDescription className="text-xs">Live connectivity to backend persistence</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-base font-semibold text-slate-800">
+                Recent Subscriptions
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Latest customer contracts initiated
+              </CardDescription>
+            </div>
+            <Link to="/subscriptions">
+              <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
+                All Contracts
+              </Button>
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Database className="w-4 h-4 text-slate-600" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-800">PostgreSQL Database</p>
-                  <p className="text-[11px] text-slate-500">
-                    Latency: {health?.metrics.database_latency_ms ?? "—"} ms
-                  </p>
-                </div>
+          <CardContent>
+            {isLoading ? (
+              <p className="text-xs text-slate-400 py-6 text-center">Loading subscriptions...</p>
+            ) : metrics?.recent_subscriptions.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center italic">
+                No subscriptions created yet.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100 text-xs">
+                {metrics?.recent_subscriptions.map((s) => (
+                  <div key={s.id} className="py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-900 block">{s.customer_name}</span>
+                      <span className="text-[11px] text-slate-500">
+                        {s.plan_name} • <span className="font-mono">{s.subscription_number}</span>
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-semibold text-slate-900 block">
+                        {formatCurrency(s.total_amount, s.currency)}
+                      </span>
+                      <Badge variant={s.status === "ACTIVE" ? "success" : "info"} className="text-[9px] py-0 px-1.5">
+                        {s.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Server className="w-4 h-4 text-slate-600" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-800">Redis Cache & Limiter</p>
-                  <p className="text-[11px] text-slate-500">
-                    Latency: {health?.metrics.redis_latency_ms ?? "—"} ms
-                  </p>
-                </div>
-              </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <ShieldAlert className="w-4 h-4 text-slate-600" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-800">Argon2id Hashing Engine</p>
-                  <p className="text-[11px] text-slate-500">Memory: 64MB / Time: 3</p>
-                </div>
-              </div>
-              <Badge variant="secondary">Active</Badge>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
