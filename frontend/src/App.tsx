@@ -20,6 +20,12 @@ import { UserManagementPage } from "@/pages/dashboard/UserManagementPage";
 import { AuditLogsPage } from "@/pages/audit/AuditLogsPage";
 import { ProfilePage } from "@/pages/profile/ProfilePage";
 
+// Product & Plan Pages
+import { ProductsListPage } from "@/pages/products/ProductsListPage";
+import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
+import { PlansListPage } from "@/pages/plans/PlansListPage";
+import { PlanDetailsPage } from "@/pages/plans/PlanDetailsPage";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -119,6 +125,42 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "STAFF"]}>
                       <CustomerPortal />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Product Catalog (Admin & Staff) */}
+                <Route
+                  path="/products"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <ProductsListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/products/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <ProductDetailsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Subscription Plans (Admin & Staff) */}
+                <Route
+                  path="/plans"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <PlansListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/plans/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <PlanDetailsPage />
                     </ProtectedRoute>
                   }
                 />

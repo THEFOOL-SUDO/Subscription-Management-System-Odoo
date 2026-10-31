@@ -11,6 +11,8 @@ import {
   FileText,
   Settings,
   Sparkles,
+  Package,
+  Layers,
 } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
@@ -21,6 +23,8 @@ export const Sidebar: React.FC = () => {
 
   const adminNav = [
     { name: "Overview", to: "/admin", icon: LayoutDashboard },
+    { name: "Products", to: "/products", icon: Package },
+    { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "User Management", to: "/admin/users", icon: Users },
     { name: "Audit Logs", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
@@ -28,6 +32,8 @@ export const Sidebar: React.FC = () => {
 
   const staffNav = [
     { name: "Staff Console", to: "/staff", icon: LayoutDashboard },
+    { name: "Product Catalog", to: "/products", icon: Package },
+    { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "Customer Accounts", to: "/staff/customers", icon: UserCheck },
     { name: "Audit Trail", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
@@ -88,7 +94,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-slate-100">
         <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
           <p className="text-xs font-semibold text-slate-800">Brightloop Platform</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Phase 1: Identity & Access</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Phase 2: Products & Plans</p>
         </div>
       </div>
     </aside>
