@@ -80,6 +80,35 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    auth_credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """Dependency that extracts user if valid token exists, returning None otherwise."""
+    if not auth_credentials or not auth_credentials.credentials:
+        return None
+
+    payload = decode_access_token(auth_credentials.credentials)
+    if not payload:
+        return None
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        return None
+
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        return None
+
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_id(user_id)
+    if not user or not user.is_active:
+        return None
+
+    return user
+
+
 def require_roles(*allowed_roles: UserRole) -> Callable:
     """Dependency factory restricting endpoints to specific roles."""
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:

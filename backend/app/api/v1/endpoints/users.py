@@ -24,15 +24,19 @@ async def list_users(
     role: Optional[str] = Query(None, description="Filter by role: ADMIN, STAFF, CUSTOMER"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     search: Optional[str] = Query(None, description="Search by name or email"),
-    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
     db: AsyncSession = Depends(get_db),
 ):
-    """List users with pagination and filtering (ADMIN only)."""
+    """List users with pagination and filtering. Staff is restricted exclusively to CUSTOMER accounts."""
+    effective_role = role
+    if current_user.role == UserRole.STAFF:
+        effective_role = UserRole.CUSTOMER.value
+
     user_svc = UserService(db)
     items, total = await user_svc.list_users(
         page=page,
         size=size,
-        role=role,
+        role=effective_role,
         is_active=is_active,
         search=search,
     )
@@ -92,7 +96,7 @@ async def get_user_by_id(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a user by ID. Customers can only view their own record."""
+    """Get a user by ID. Customers can only view their own record. Staff can only view Customers and themselves."""
     if current_user.role == UserRole.CUSTOMER and current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -101,4 +105,11 @@ async def get_user_by_id(
 
     user_svc = UserService(db)
     user = await user_svc.get_user_profile(user_id)
+
+    if current_user.role == UserRole.STAFF and user.role != UserRole.CUSTOMER and user.id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff cannot inspect administrative user profiles.",
+        )
+
     return UserResponse.model_validate(user)

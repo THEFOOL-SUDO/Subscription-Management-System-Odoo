@@ -160,3 +160,79 @@ async def test_forgot_and_reset_password_flow(client: AsyncClient, db_session):
     # New password succeeds
     new_login = await client.post("/api/v1/auth/login", json={"email": email, "password": new_pwd})
     assert new_login.status_code == 200
+
+    # 4. Attempt to REUSE the same reset token -> MUST FAIL (Single-use enforcement)
+    reused_reset = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "new_password": "YetAnotherPassword#2026"},
+    )
+    assert reused_reset.status_code == 400
+    assert "Invalid or expired" in reused_reset.json()["detail"]
+    await db_session.close()
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_invalidates_prior_tokens(client: AsyncClient, db_session):
+    email = f"multi_reset_{uuid.uuid4().hex[:8]}@example.com"
+    pwd = "InitialPassword#2026"
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "full_name": "Multi Reset User", "password": pwd},
+    )
+
+    # 1. Request first reset
+    await client.post("/api/v1/auth/forgot-password", json={"email": email})
+
+    # Retrieve first token
+    stmt = (
+        select(PasswordResetToken)
+        .join(User, PasswordResetToken.user_id == User.id)
+        .where(User.email == email)
+        .order_by(PasswordResetToken.created_at.desc())
+    )
+    res1 = await db_session.execute(stmt)
+    token1 = res1.scalars().first()
+    assert token1 is not None
+    assert token1.is_used is False
+
+    # Assign known token
+    raw_token1 = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    token1.token_hash = hash_token(raw_token1)
+    await db_session.commit()
+
+    # 2. Request second reset
+    await client.post("/api/v1/auth/forgot-password", json={"email": email})
+
+    # Check that first token was marked used / invalidated
+    await db_session.refresh(token1)
+    assert token1.is_used is True
+
+    # 3. Attempt to reset using first token -> MUST FAIL
+    attempt_res1 = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token1, "new_password": "FailedUpdate#2026"},
+    )
+    assert attempt_res1.status_code == 400
+    await db_session.close()
+
+
+@pytest.mark.asyncio
+async def test_logout_without_access_token_still_revokes_refresh_token(client: AsyncClient):
+    email = f"logout_no_jwt_{uuid.uuid4().hex[:8]}@example.com"
+    pwd = "Password#2026"
+    reg_res = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "full_name": "Logout User", "password": pwd},
+    )
+    refresh_cookie = reg_res.cookies["refresh_token"]
+
+    # Call logout WITHOUT Authorization header (e.g. access token expired)
+    client.cookies.set("refresh_token", refresh_cookie)
+    logout_res = await client.post("/api/v1/auth/logout")
+    assert logout_res.status_code == 200
+    assert "Successfully logged out" in logout_res.json()["message"]
+
+    # Now verify that trying to refresh with that cookie fails because it was revoked
+    client.cookies.set("refresh_token", refresh_cookie)
+    subsequent_refresh = await client.post("/api/v1/auth/refresh")
+    assert subsequent_refresh.status_code == 401

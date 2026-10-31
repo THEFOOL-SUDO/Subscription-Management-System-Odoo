@@ -39,8 +39,10 @@ class TokenRepository:
         await self.session.refresh(token)
         return token
 
-    async def get_refresh_token_by_hash(self, token_hash: str) -> Optional[RefreshToken]:
+    async def get_refresh_token_by_hash(self, token_hash: str, for_update: bool = False) -> Optional[RefreshToken]:
         stmt = select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -74,6 +76,20 @@ class TokenRepository:
     # Password Reset Token Operations
     # --------------------------------------------------------------------------
 
+    async def invalidate_user_password_reset_tokens(self, user_id: uuid.UUID) -> int:
+        """Invalidate all prior unused password reset tokens for a user."""
+        stmt = (
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.user_id == user_id,
+                PasswordResetToken.is_used.is_(False),
+            )
+            .values(is_used=True)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount
+
     async def create_password_reset_token(
         self,
         user_id: uuid.UUID,
@@ -95,6 +111,7 @@ class TokenRepository:
     async def get_valid_password_reset_token(
         self,
         token_hash: str,
+        for_update: bool = False,
     ) -> Optional[PasswordResetToken]:
         now = datetime.datetime.now(datetime.timezone.utc)
         stmt = (
@@ -105,6 +122,8 @@ class TokenRepository:
                 PasswordResetToken.expires_at > now,
             )
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

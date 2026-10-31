@@ -49,7 +49,7 @@ def validate_password_complexity(password: str) -> tuple[bool, str]:
         return False, "Password must contain at least one lowercase letter."
     if not re.search(r"\d", password):
         return False, "Password must contain at least one number."
-    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`^]", password):
         return False, "Password must contain at least one special character."
     return True, ""
 

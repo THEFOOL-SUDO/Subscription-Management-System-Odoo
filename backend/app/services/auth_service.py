@@ -165,9 +165,9 @@ class AuthService:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> Tuple[User, str, str]:
-        """Rotate refresh token with reuse detection."""
+        """Rotate refresh token with row locking and reuse detection."""
         token_hash = hash_token(raw_refresh_token)
-        token_record = await self.token_repo.get_refresh_token_by_hash(token_hash)
+        token_record = await self.token_repo.get_refresh_token_by_hash(token_hash, for_update=True)
 
         if not token_record:
             raise HTTPException(
@@ -196,7 +196,7 @@ class AuthService:
         now = datetime.datetime.now(datetime.timezone.utc)
         if token_record.expires_at <= now:
             token_record.is_revoked = True
-            await self.session.flush()
+            await self.session.commit()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session expired. Please log in again.",
@@ -279,6 +279,9 @@ class AuthService:
         """Issue password reset token and send reset email. Uniform response to prevent email enumeration."""
         user = await self.user_repo.get_by_email(email)
         if user and user.is_active:
+            # Invalidate any prior unused reset tokens for this user
+            await self.token_repo.invalidate_user_password_reset_tokens(user.id)
+
             raw_reset_token = generate_secure_token()
             token_hash = hash_token(raw_reset_token)
             expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
@@ -317,7 +320,7 @@ class AuthService:
     ) -> None:
         """Verify reset token, update user password, and invalidate active sessions."""
         token_hash = hash_token(raw_token)
-        token_record = await self.token_repo.get_valid_password_reset_token(token_hash)
+        token_record = await self.token_repo.get_valid_password_reset_token(token_hash, for_update=True)
 
         if not token_record:
             raise HTTPException(

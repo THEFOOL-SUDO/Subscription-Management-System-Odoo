@@ -3,7 +3,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.database import get_db
-from app.core.dependencies import get_client_info, get_current_user
+from app.core.dependencies import get_client_info, get_current_user, get_optional_current_user
 from app.core.rate_limiter import check_rate_limit
 from app.models.user import User
 from app.schemas.auth import (
@@ -131,7 +131,7 @@ async def logout(
     request: Request,
     response: Response,
     refresh_token: Optional[str] = Cookie(None),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke refresh token family and clear session cookies."""
@@ -183,6 +183,13 @@ async def reset_password(
 ):
     """Reset password using verified single-use reset token."""
     ip, user_agent = get_client_info(request)
+    allowed, _, retry_after = await check_rate_limit(f"reset_pwd:{ip or 'unknown'}", max_requests=10, window_seconds=60)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Try again in {retry_after} seconds.",
+        )
+
     auth_svc = AuthService(db)
     await auth_svc.reset_password(
         raw_token=payload.token,
