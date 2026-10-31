@@ -66,6 +66,10 @@ class SubscriptionStatusTransitionRequest(BaseModel):
     reason: Optional[str] = Field(None, max_length=255)
 
 
+class SubscriptionActionRequest(BaseModel):
+    reason: Optional[str] = Field(None, max_length=255)
+
+
 class SubscriptionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -76,6 +80,9 @@ class SubscriptionResponse(BaseModel):
     status: SubscriptionStatus
     start_date: datetime.datetime
     expiry_date: Optional[datetime.datetime] = None
+    next_billing_date: Optional[datetime.datetime] = None
+    paused_at: Optional[datetime.datetime] = None
+    total_paused_days: int = 0
     billing_interval: BillingInterval
     interval_count: int
     currency: str

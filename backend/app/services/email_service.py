@@ -148,3 +148,64 @@ class EmailService:
         """
         text_content = f"Hello {full_name},\n\nWelcome to Brightloop! Log in to your account at: {settings.FRONTEND_URL}"
         return await cls.send_email(recipient_email, subject, html_content, text_content)
+
+    @classmethod
+    async def send_invoice_email(
+        cls,
+        recipient_email: str,
+        customer_name: str,
+        invoice_number: str,
+        total_amount: str,
+        balance_due: str,
+        currency: str,
+        due_date: str,
+    ) -> bool:
+        subject = f"Invoice {invoice_number} from Brightloop Platform"
+        pay_url = f"{settings.FRONTEND_URL}/portal/invoices"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; padding: 24px; }}
+            .container {{ max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 32px; }}
+            .header {{ border-bottom: 2px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px; }}
+            .title {{ font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }}
+            .meta-box {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0; }}
+            .row {{ display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }}
+            .total-row {{ font-weight: 700; font-size: 16px; border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 8px; }}
+            .btn {{ display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 16px 0; }}
+            .footer {{ font-size: 12px; color: #64748b; margin-top: 28px; border-top: 1px solid #f1f5f9; padding-top: 16px; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="title">BRIGHTLOOP PLATFORM</h1>
+              <p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">Executive Billing Intelligence</p>
+            </div>
+            <p>Dear {customer_name},</p>
+            <p>A new invoice <strong>{invoice_number}</strong> has been generated for your active subscription service.</p>
+            <div class="meta-box">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr><td style="padding: 4px 0; color: #64748b;">Invoice Number:</td><td style="text-align: right; font-weight: 600;">{invoice_number}</td></tr>
+                <tr><td style="padding: 4px 0; color: #64748b;">Due Date:</td><td style="text-align: right;">{due_date}</td></tr>
+                <tr><td style="padding: 4px 0; color: #64748b;">Total Amount:</td><td style="text-align: right;">{currency} {total_amount}</td></tr>
+                <tr style="border-top: 1px solid #e2e8f0;"><td style="padding: 8px 0 0 0; font-weight: 700; color: #0f172a;">Balance Due:</td><td style="text-align: right; padding: 8px 0 0 0; font-weight: 700; color: #4f46e5;">{currency} {balance_due}</td></tr>
+              </table>
+            </div>
+            <p style="text-align: center;">
+              <a href="{pay_url}" class="btn">View & Pay Invoice in Portal</a>
+            </p>
+            <p style="font-size: 13px; color: #64748b;">You can settle this invoice securely through our portal using simulated demo cards, UPI, or corporate netbanking.</p>
+            <div class="footer">
+              <p>Brightloop Technologies Pvt Ltd — Enterprise Subscription OS</p>
+              <p>Demo Billing Simulation Environment</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+        text_content = f"Invoice {invoice_number} from Brightloop Platform\n\nDear {customer_name},\n\nYour invoice {invoice_number} for {currency} {total_amount} (Balance Due: {currency} {balance_due}) is ready.\n\nView and pay online at: {pay_url}"
+        return await cls.send_email(recipient_email, subject, html_content, text_content)

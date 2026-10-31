@@ -336,8 +336,9 @@ class SubscriptionService:
         # DRAFT -> QUOTATION, CLOSED
         # QUOTATION -> CONFIRMED, DRAFT, CLOSED
         # CONFIRMED -> ACTIVE, CLOSED
-        # ACTIVE -> CLOSED
-        # CLOSED -> Terminal
+        # ACTIVE -> PAUSED, CLOSED
+        # PAUSED -> ACTIVE, CLOSED
+        # CLOSED -> Terminal (or RENEWED via dedicated renew endpoint)
         valid_transitions = {
             SubscriptionStatus.DRAFT: {SubscriptionStatus.QUOTATION, SubscriptionStatus.CLOSED},
             SubscriptionStatus.QUOTATION: {
@@ -346,7 +347,8 @@ class SubscriptionService:
                 SubscriptionStatus.CLOSED,
             },
             SubscriptionStatus.CONFIRMED: {SubscriptionStatus.ACTIVE, SubscriptionStatus.CLOSED},
-            SubscriptionStatus.ACTIVE: {SubscriptionStatus.CLOSED},
+            SubscriptionStatus.ACTIVE: {SubscriptionStatus.PAUSED, SubscriptionStatus.CLOSED},
+            SubscriptionStatus.PAUSED: {SubscriptionStatus.ACTIVE, SubscriptionStatus.CLOSED},
             SubscriptionStatus.CLOSED: set(),
         }
 
@@ -388,3 +390,164 @@ class SubscriptionService:
 
         return updated_sub
 
+    async def pause_subscription(
+        self,
+        subscription_id: uuid.UUID,
+        reason: Optional[str],
+        operator: User,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Subscription:
+        if operator.role == UserRole.CUSTOMER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customers cannot pause subscriptions directly.")
+
+        subscription = await self.repo.get_by_id(subscription_id)
+        if not subscription:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found.")
+
+        if subscription.status != SubscriptionStatus.ACTIVE:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot pause subscription in status '{subscription.status.value}'. Must be ACTIVE.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        subscription.status = SubscriptionStatus.PAUSED
+        subscription.paused_at = now
+        subscription.updated_by_id = operator.id
+
+        history_item = SubscriptionStatusHistory(
+            subscription_id=subscription.id,
+            from_status=SubscriptionStatus.ACTIVE.value,
+            to_status=SubscriptionStatus.PAUSED.value,
+            reason=reason or "Subscription paused by operator",
+            changed_by_id=operator.id,
+        )
+        await self.repo.add_status_history(history_item)
+        updated = await self.repo.update(subscription)
+
+        await self.audit_service.log(
+            action="SUBSCRIPTION_PAUSED",
+            resource_type="subscription",
+            user_id=operator.id,
+            resource_id=str(subscription.id),
+            details={"subscription_number": subscription.subscription_number, "reason": reason},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        return updated
+
+    async def resume_subscription(
+        self,
+        subscription_id: uuid.UUID,
+        operator: User,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Subscription:
+        if operator.role == UserRole.CUSTOMER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customers cannot resume subscriptions directly.")
+
+        subscription = await self.repo.get_by_id(subscription_id)
+        if not subscription:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found.")
+
+        if subscription.status != SubscriptionStatus.PAUSED:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot resume subscription in status '{subscription.status.value}'. Must be PAUSED.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        paused_duration = (now - subscription.paused_at) if subscription.paused_at else datetime.timedelta(days=0)
+        paused_days = max(1, paused_duration.days) if paused_duration.total_seconds() > 3600 else 0
+
+        if paused_days > 0:
+            subscription.total_paused_days += paused_days
+            if subscription.expiry_date:
+                subscription.expiry_date = subscription.expiry_date + datetime.timedelta(days=paused_days)
+            if subscription.next_billing_date:
+                subscription.next_billing_date = subscription.next_billing_date + datetime.timedelta(days=paused_days)
+
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.paused_at = None
+        subscription.updated_by_id = operator.id
+
+        history_item = SubscriptionStatusHistory(
+            subscription_id=subscription.id,
+            from_status=SubscriptionStatus.PAUSED.value,
+            to_status=SubscriptionStatus.ACTIVE.value,
+            reason=f"Subscription resumed. Shifted timeline by {paused_days} paused day(s).",
+            changed_by_id=operator.id,
+        )
+        await self.repo.add_status_history(history_item)
+        updated = await self.repo.update(subscription)
+
+        await self.audit_service.log(
+            action="SUBSCRIPTION_RESUMED",
+            resource_type="subscription",
+            user_id=operator.id,
+            resource_id=str(subscription.id),
+            details={"subscription_number": subscription.subscription_number, "paused_days": paused_days},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        return updated
+
+    async def renew_subscription(
+        self,
+        subscription_id: uuid.UUID,
+        operator: User,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Subscription:
+        if operator.role == UserRole.CUSTOMER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customers cannot renew subscriptions directly.")
+
+        subscription = await self.repo.get_by_id(subscription_id)
+        if not subscription:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found.")
+
+        if subscription.status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.CLOSED):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot renew subscription in status '{subscription.status.value}'.")
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        base_date = subscription.expiry_date if (subscription.expiry_date and subscription.expiry_date > now) else now
+        new_expiry = self._calculate_expiry_date(base_date, subscription.billing_interval, subscription.interval_count)
+
+        prev_status = subscription.status.value
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.expiry_date = new_expiry
+        subscription.next_billing_date = new_expiry
+        subscription.updated_by_id = operator.id
+
+        history_item = SubscriptionStatusHistory(
+            subscription_id=subscription.id,
+            from_status=prev_status,
+            to_status=SubscriptionStatus.ACTIVE.value,
+            reason=f"Subscription manually renewed until {new_expiry.isoformat()}.",
+            changed_by_id=operator.id,
+        )
+        await self.repo.add_status_history(history_item)
+        updated = await self.repo.update(subscription)
+
+        await self.audit_service.log(
+            action="SUBSCRIPTION_RENEWED",
+            resource_type="subscription",
+            user_id=operator.id,
+            resource_id=str(subscription.id),
+            details={"subscription_number": subscription.subscription_number, "new_expiry": new_expiry.isoformat()},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        return updated
+
+    async def close_subscription(
+        self,
+        subscription_id: uuid.UUID,
+        reason: Optional[str],
+        operator: User,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Subscription:
+        return await self.transition_status(
+            subscription_id=subscription_id,
+            to_status=SubscriptionStatus.CLOSED,
+            reason=reason or "Early subscription closure by operator",
+            operator=operator,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )

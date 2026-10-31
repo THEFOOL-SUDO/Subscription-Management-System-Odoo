@@ -44,5 +44,11 @@ export const invoicesApi = {
     });
     return response.data;
   },
-};
 
+  sendInvoiceEmail: async (id: string): Promise<{ success: boolean; recipient: string; message: string }> => {
+    const response = await apiClient.post<{ success: boolean; recipient: string; message: string }>(
+      `/api/v1/invoices/${id}/send-email`
+    );
+    return response.data;
+  },
+};

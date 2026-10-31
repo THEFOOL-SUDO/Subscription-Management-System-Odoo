@@ -7,6 +7,7 @@ export type SubscriptionStatus =
   | "QUOTATION"
   | "CONFIRMED"
   | "ACTIVE"
+  | "PAUSED"
   | "CLOSED";
 
 export type PaymentTerms = "IMMEDIATE" | "NET_15" | "NET_30" | "NET_60";
@@ -41,6 +42,9 @@ export interface Subscription {
   status: SubscriptionStatus;
   start_date: string;
   expiry_date: string | null;
+  next_billing_date?: string | null;
+  paused_at?: string | null;
+  total_paused_days?: number;
   billing_interval: BillingInterval;
   interval_count: number;
   currency: string;
@@ -86,4 +90,3 @@ export interface SubscriptionListResponse {
   size: number;
   pages: number;
 }
-

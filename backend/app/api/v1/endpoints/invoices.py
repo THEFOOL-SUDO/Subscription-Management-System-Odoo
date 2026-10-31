@@ -1,7 +1,8 @@
+import datetime
 import math
 import uuid
-from typing import Optional
-from fastapi import APIRouter, Depends, Query, Request, status
+from typing import Any, Dict, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_client_info, get_current_user, require_roles
@@ -13,6 +14,7 @@ from app.schemas.invoice import (
     InvoiceResponse,
     InvoiceStatusTransitionRequest,
 )
+from app.services.email_service import EmailService
 from app.services.invoice_service import InvoiceService
 
 router = APIRouter(prefix="/invoices", tags=["Invoicing Engine"])
@@ -106,3 +108,40 @@ async def transition_invoice_status(
     )
     return InvoiceResponse.model_validate(updated)
 
+
+@router.post("/{id}/send-email", response_model=Dict[str, Any])
+async def send_invoice_email(
+    id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually dispatch invoice notification email to customer."""
+    svc = InvoiceService(db)
+    inv = await svc.get_invoice(id, current_user)
+    if not inv.customer or not inv.customer.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Customer has no valid email address.",
+        )
+
+    due_str = inv.due_date.strftime("%d %b %Y") if inv.due_date else "Upon Receipt"
+    sent = await EmailService.send_invoice_email(
+        recipient_email=inv.customer.email,
+        customer_name=inv.customer.name,
+        invoice_number=inv.invoice_number,
+        total_amount=str(inv.total_amount),
+        balance_due=str(inv.balance_due),
+        currency=inv.currency,
+        due_date=due_str,
+    )
+    if sent:
+        inv.email_sent_at = datetime.datetime.now(datetime.timezone.utc)
+        await svc.repo.update(inv)
+
+    return {
+        "success": sent,
+        "recipient": inv.customer.email,
+        "invoice_number": inv.invoice_number,
+        "message": f"Invoice email {'sent successfully' if sent else 'failed to send'}.",
+    }

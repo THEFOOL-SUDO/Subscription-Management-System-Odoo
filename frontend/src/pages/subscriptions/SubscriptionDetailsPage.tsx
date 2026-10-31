@@ -78,6 +78,51 @@ export const SubscriptionDetailsPage: React.FC = () => {
     },
   });
 
+  const pauseMutation = useMutation({
+    mutationFn: (reason?: string) => {
+      if (!id) throw new Error("Missing ID");
+      return subscriptionsApi.pauseSubscription(id, reason || "Paused by operator");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription", id] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      success("Subscription has been PAUSED. Billing suspended.", "Subscription Paused");
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || "Failed to pause subscription.", "Action Failed");
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => {
+      if (!id) throw new Error("Missing ID");
+      return subscriptionsApi.resumeSubscription(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription", id] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      success("Subscription RESUMED. Billing timeline forward-shifted.", "Subscription Resumed");
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || "Failed to resume subscription.", "Action Failed");
+    },
+  });
+
+  const renewMutation = useMutation({
+    mutationFn: () => {
+      if (!id) throw new Error("Missing ID");
+      return subscriptionsApi.renewSubscription(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription", id] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      success("Subscription RENEWED for next billing interval.", "Subscription Renewed");
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || "Failed to renew subscription.", "Action Failed");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="py-24 text-center">
@@ -105,6 +150,8 @@ export const SubscriptionDetailsPage: React.FC = () => {
     switch (status) {
       case "ACTIVE":
         return <Badge variant="success">ACTIVE</Badge>;
+      case "PAUSED":
+        return <Badge variant="warning">PAUSED</Badge>;
       case "CONFIRMED":
         return <Badge variant="info">CONFIRMED</Badge>;
       case "QUOTATION":
@@ -118,7 +165,7 @@ export const SubscriptionDetailsPage: React.FC = () => {
     }
   };
 
-  const stages: SubscriptionStatus[] = ["DRAFT", "QUOTATION", "CONFIRMED", "ACTIVE", "CLOSED"];
+  const stages: SubscriptionStatus[] = ["DRAFT", "QUOTATION", "CONFIRMED", "ACTIVE", "PAUSED", "CLOSED"];
   const currentStageIndex = stages.indexOf(subscription.status);
 
   return (
@@ -270,7 +317,25 @@ export const SubscriptionDetailsPage: React.FC = () => {
                       ) : (
                         <PlusCircle className="w-4 h-4 text-blue-600" />
                       )}
-                      Issue Renewal Invoice
+                      Issue Invoice
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pauseMutation.mutate("Paused via operator control")}
+                      disabled={pauseMutation.isPending}
+                      className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      Pause
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => renewMutation.mutate()}
+                      disabled={renewMutation.isPending}
+                      className="gap-1.5 text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                    >
+                      Renew Cycle
                     </Button>
                     <Button
                       variant="outline"
@@ -285,9 +350,50 @@ export const SubscriptionDetailsPage: React.FC = () => {
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <XCircle className="w-4 h-4" />
-                      Close Subscription
+                      Close
                     </Button>
                   </>
+                )}
+
+                {subscription.status === "PAUSED" && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => resumeMutation.mutate()}
+                      disabled={resumeMutation.isPending}
+                      className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 font-bold"
+                    >
+                      <Play className="w-4 h-4" />
+                      Resume Subscription
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        transitionMutation.mutate({
+                          toStatus: "CLOSED",
+                          reason: "Terminated while paused",
+                        })
+                      }
+                      disabled={transitionMutation.isPending}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Close
+                    </Button>
+                  </>
+                )}
+
+                {subscription.status === "CLOSED" && (
+                  <Button
+                    size="sm"
+                    onClick={() => renewMutation.mutate()}
+                    disabled={renewMutation.isPending}
+                    className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 font-bold"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Renew / Re-activate
+                  </Button>
                 )}
               </div>
             )}

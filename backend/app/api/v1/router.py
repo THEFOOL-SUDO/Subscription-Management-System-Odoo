@@ -2,15 +2,19 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     audit_logs,
     auth,
+    billing,
     customers,
     dashboard,
+    discounts,
     health,
     invoices,
     payments,
     plans,
     pricing,
     products,
+    quotations,
     subscriptions,
+    taxes,
     users,
 )
 
@@ -27,3 +31,7 @@ api_router.include_router(subscriptions.router)
 api_router.include_router(invoices.router)
 api_router.include_router(payments.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(quotations.router)
+api_router.include_router(discounts.router)
+api_router.include_router(taxes.router)
+api_router.include_router(billing.router)

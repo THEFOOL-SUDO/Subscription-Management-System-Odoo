@@ -88,12 +88,12 @@ class InvoiceService:
     async def create_invoice_from_subscription(
         self,
         data: InvoiceCreateRequest,
-        operator: User,
+        operator: Optional[User] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> Invoice:
         # Customers cannot generate invoices
-        if operator.role == UserRole.CUSTOMER:
+        if operator and operator.role == UserRole.CUSTOMER:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Customers are not permitted to generate invoices.",
@@ -174,8 +174,9 @@ class InvoiceService:
             total_amount=total_amount,
             amount_paid=amount_paid,
             balance_due=balance_due,
+            discount_rule_id=subscription.discount_rule_id,
             notes=data.notes,
-            created_by_id=operator.id,
+            created_by_id=operator.id if operator else None,
         )
 
         for s_item in subscription.items:
@@ -268,3 +269,4 @@ class InvoiceService:
 
         return updated_inv
 
+    create_invoice = create_invoice_from_subscription

@@ -35,6 +35,11 @@ import { SubscriptionDetailsPage } from "@/pages/subscriptions/SubscriptionDetai
 import { InvoicesListPage } from "@/pages/invoices/InvoicesListPage";
 import { InvoiceDetailsPage } from "@/pages/invoices/InvoiceDetailsPage";
 
+// Commercial Elevation Pages
+import { QuotationTemplatesPage } from "@/pages/quotations/QuotationTemplatesPage";
+import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
+import { TaxSettingsPage } from "@/pages/taxes/TaxSettingsPage";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -222,6 +227,32 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
                       <InvoiceDetailsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Commercial Elevation: Quotations, Discounts, Taxes */}
+                <Route
+                  path="/quotations"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF", "CUSTOMER"]}>
+                      <QuotationTemplatesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/discounts"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <DiscountsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/taxes"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+                      <TaxSettingsPage />
                     </ProtectedRoute>
                   }
                 />

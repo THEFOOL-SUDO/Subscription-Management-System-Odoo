@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { billingApi } from "@/api/billing";
 import {
   LayoutDashboard,
   Users,
@@ -13,13 +14,36 @@ import {
   Sparkles,
   Package,
   Layers,
+  FileCheck,
+  Tag,
+  Receipt,
+  PlayCircle,
+  Loader2,
 } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
   const { user } = useAuth();
+  const [isRunningBilling, setIsRunningBilling] = useState(false);
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+
   if (!user) return null;
 
   const role = user.role;
+
+  const handleRunBilling = async () => {
+    setIsRunningBilling(true);
+    setBillingMessage(null);
+    try {
+      const res = await billingApi.runBillingScheduler();
+      setBillingMessage(`Billing run complete: ${res.invoices_generated_count} invoices generated.`);
+      setTimeout(() => setBillingMessage(null), 5000);
+    } catch (err: any) {
+      setBillingMessage(err?.response?.data?.detail || "Scheduler execution failed.");
+      setTimeout(() => setBillingMessage(null), 5000);
+    } finally {
+      setIsRunningBilling(false);
+    }
+  };
 
   const adminNav = [
     { name: "Overview", to: "/admin", icon: LayoutDashboard },
@@ -27,8 +51,11 @@ export const Sidebar: React.FC = () => {
     { name: "Products", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "Customer Directory", to: "/customers", icon: UserCheck },
+    { name: "Quotations", to: "/quotations", icon: FileCheck },
     { name: "Subscriptions", to: "/subscriptions", icon: CreditCard },
     { name: "Invoices & Billing", to: "/invoices", icon: FileText },
+    { name: "Discounts & Promos", to: "/discounts", icon: Tag },
+    { name: "Tax Schedules", to: "/taxes", icon: Receipt },
     { name: "User Management", to: "/admin/users", icon: Users },
     { name: "Audit Logs", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
@@ -40,8 +67,11 @@ export const Sidebar: React.FC = () => {
     { name: "Product Catalog", to: "/products", icon: Package },
     { name: "Subscription Plans", to: "/plans", icon: Layers },
     { name: "Customer Accounts", to: "/customers", icon: UserCheck },
+    { name: "Quotations", to: "/quotations", icon: FileCheck },
     { name: "Subscriptions", to: "/subscriptions", icon: CreditCard },
     { name: "Invoices & Billing", to: "/invoices", icon: FileText },
+    { name: "Discounts & Promos", to: "/discounts", icon: Tag },
+    { name: "Tax Schedules", to: "/taxes", icon: Receipt },
     { name: "Audit Trail", to: "/audit-logs", icon: ShieldAlert },
     { name: "My Profile", to: "/profile", icon: Settings },
   ];
@@ -49,6 +79,7 @@ export const Sidebar: React.FC = () => {
   const customerNav = [
     { name: "My Portal", to: "/portal", icon: LayoutDashboard },
     { name: "Browse Catalogue", to: "/catalogue", icon: Sparkles },
+    { name: "My Quotations", to: "/quotations", icon: FileCheck },
     { name: "My Subscriptions", to: "/subscriptions", icon: CreditCard },
     { name: "My Invoices", to: "/invoices", icon: FileText },
     { name: "Profile & Security", to: "/profile", icon: Settings },
@@ -98,11 +129,33 @@ export const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+      {/* Footer Info & Scheduler Trigger */}
+      <div className="p-4 border-t border-slate-100 space-y-2">
+        {role !== "CUSTOMER" && (
+          <div>
+            <button
+              onClick={handleRunBilling}
+              disabled={isRunningBilling}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+            >
+              {isRunningBilling ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <PlayCircle className="w-3.5 h-3.5" />
+              )}
+              <span>{isRunningBilling ? "Running Cycle..." : "Run Billing Scheduler"}</span>
+            </button>
+            {billingMessage && (
+              <p className="text-[11px] text-indigo-700 bg-indigo-50/80 p-2 rounded border border-indigo-100 mt-1.5 font-medium leading-tight">
+                {billingMessage}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
           <p className="text-xs font-semibold text-slate-800">Brightloop Platform</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Phase 3: Subscriptions & Billing</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Enterprise Subscription OS</p>
         </div>
       </div>
     </aside>

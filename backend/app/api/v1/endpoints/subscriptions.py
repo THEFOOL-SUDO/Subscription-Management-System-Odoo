@@ -8,6 +8,7 @@ from app.core.dependencies import get_client_info, get_current_user, require_rol
 from app.models.subscription import SubscriptionStatus
 from app.models.user import User, UserRole
 from app.schemas.subscription import (
+    SubscriptionActionRequest,
     SubscriptionCreate,
     SubscriptionListResponse,
     SubscriptionResponse,
@@ -100,3 +101,82 @@ async def transition_subscription_status(
     )
     return SubscriptionResponse.model_validate(updated)
 
+
+@router.post("/{id}/pause", response_model=SubscriptionResponse)
+async def pause_subscription(
+    id: uuid.UUID,
+    data: Optional[SubscriptionActionRequest] = None,
+    request: Request = None,
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pause an active subscription."""
+    ip, user_agent = get_client_info(request) if request else (None, None)
+    svc = SubscriptionService(db)
+    updated = await svc.pause_subscription(
+        subscription_id=id,
+        reason=data.reason if data else None,
+        operator=current_user,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
+    return SubscriptionResponse.model_validate(updated)
+
+
+@router.post("/{id}/resume", response_model=SubscriptionResponse)
+async def resume_subscription(
+    id: uuid.UUID,
+    request: Request = None,
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resume a paused subscription and forward-shift billing dates."""
+    ip, user_agent = get_client_info(request) if request else (None, None)
+    svc = SubscriptionService(db)
+    updated = await svc.resume_subscription(
+        subscription_id=id,
+        operator=current_user,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
+    return SubscriptionResponse.model_validate(updated)
+
+
+@router.post("/{id}/renew", response_model=SubscriptionResponse)
+async def renew_subscription(
+    id: uuid.UUID,
+    request: Request = None,
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Renew an active or expired subscription for a new billing cycle."""
+    ip, user_agent = get_client_info(request) if request else (None, None)
+    svc = SubscriptionService(db)
+    updated = await svc.renew_subscription(
+        subscription_id=id,
+        operator=current_user,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
+    return SubscriptionResponse.model_validate(updated)
+
+
+@router.post("/{id}/close", response_model=SubscriptionResponse)
+async def close_subscription(
+    id: uuid.UUID,
+    data: Optional[SubscriptionActionRequest] = None,
+    request: Request = None,
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.STAFF)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Early terminate or close a subscription."""
+    ip, user_agent = get_client_info(request) if request else (None, None)
+    svc = SubscriptionService(db)
+    updated = await svc.close_subscription(
+        subscription_id=id,
+        reason=data.reason if data else None,
+        operator=current_user,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
+    return SubscriptionResponse.model_validate(updated)

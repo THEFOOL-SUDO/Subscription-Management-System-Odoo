@@ -42,5 +42,34 @@ export const subscriptionsApi = {
     );
     return response.data;
   },
-};
 
+  pauseSubscription: async (id: string, reason?: string): Promise<Subscription> => {
+    const response = await apiClient.post<Subscription>(
+      `/api/v1/subscriptions/${id}/pause`,
+      { reason }
+    );
+    return response.data;
+  },
+
+  resumeSubscription: async (id: string): Promise<Subscription> => {
+    const response = await apiClient.post<Subscription>(
+      `/api/v1/subscriptions/${id}/resume`
+    );
+    return response.data;
+  },
+
+  renewSubscription: async (id: string): Promise<Subscription> => {
+    const response = await apiClient.post<Subscription>(
+      `/api/v1/subscriptions/${id}/renew`
+    );
+    return response.data;
+  },
+
+  closeSubscription: async (id: string, reason?: string): Promise<Subscription> => {
+    const response = await apiClient.post<Subscription>(
+      `/api/v1/subscriptions/${id}/close`,
+      { reason }
+    );
+    return response.data;
+  },
+};

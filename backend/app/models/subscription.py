@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from app.models.plan import SubscriptionPlan
     from app.models.product import Product, ProductVariant
     from app.models.invoice import Invoice
+    from app.models.discount import DiscountRule
+    from app.models.quotation import QuotationTemplate
 
 
 class SubscriptionStatus(str, enum.Enum):
@@ -31,6 +33,7 @@ class SubscriptionStatus(str, enum.Enum):
     QUOTATION = "QUOTATION"
     CONFIRMED = "CONFIRMED"
     ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
     CLOSED = "CLOSED"
 
 
@@ -131,6 +134,30 @@ class Subscription(Base, TimestampMixin):
         Text,
         nullable=True,
     )
+    next_billing_date: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    paused_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    total_paused_days: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    discount_rule_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("discount_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    quotation_template_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quotation_templates.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -169,6 +196,16 @@ class Subscription(Base, TimestampMixin):
     invoices: Mapped[List["Invoice"]] = relationship(
         "Invoice",
         back_populates="subscription",
+        lazy="selectin",
+    )
+    discount_rule: Mapped[Optional["DiscountRule"]] = relationship(
+        "DiscountRule",
+        foreign_keys=[discount_rule_id],
+        lazy="selectin",
+    )
+    quotation_template: Mapped[Optional["QuotationTemplate"]] = relationship(
+        "QuotationTemplate",
+        foreign_keys=[quotation_template_id],
         lazy="selectin",
     )
     creator: Mapped[Optional["User"]] = relationship(
@@ -290,4 +327,3 @@ class SubscriptionStatusHistory(Base):
         "User",
         lazy="selectin",
     )
-

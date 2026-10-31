@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from app.models.subscription import Subscription
     from app.models.product import Product, ProductVariant
     from app.models.payment import Payment
+    from app.models.discount import DiscountRule
+    from app.models.tax import TaxRule
 
 
 class InvoiceStatus(str, enum.Enum):
@@ -133,6 +135,20 @@ class Invoice(Base, TimestampMixin):
         Text,
         nullable=True,
     )
+    discount_rule_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("discount_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    tax_rule_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tax_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    email_sent_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -148,6 +164,16 @@ class Invoice(Base, TimestampMixin):
     customer: Mapped["Customer"] = relationship(
         "Customer",
         back_populates="invoices",
+        lazy="selectin",
+    )
+    discount_rule: Mapped[Optional["DiscountRule"]] = relationship(
+        "DiscountRule",
+        foreign_keys=[discount_rule_id],
+        lazy="selectin",
+    )
+    tax_rule: Mapped[Optional["TaxRule"]] = relationship(
+        "TaxRule",
+        foreign_keys=[tax_rule_id],
         lazy="selectin",
     )
     items: Mapped[List["InvoiceItem"]] = relationship(
@@ -226,4 +252,3 @@ class InvoiceItem(Base, TimestampMixin):
         "ProductVariant",
         lazy="selectin",
     )
-

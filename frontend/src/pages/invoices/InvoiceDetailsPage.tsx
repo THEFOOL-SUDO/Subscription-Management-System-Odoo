@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentModal } from "./RecordPaymentModal";
+import { DemoPaymentModal } from "@/components/payments/DemoPaymentModal";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import {
   CreditCard,
@@ -18,6 +19,8 @@ import {
   Printer,
   XCircle,
   Sparkles,
+  Mail,
+  ShieldAlert,
 } from "lucide-react";
 
 export const InvoiceDetailsPage: React.FC = () => {
@@ -28,6 +31,7 @@ export const InvoiceDetailsPage: React.FC = () => {
   const isOperator = user?.role === "ADMIN" || user?.role === "STAFF";
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -42,6 +46,20 @@ export const InvoiceDetailsPage: React.FC = () => {
     queryKey: ["invoice-payments", id],
     queryFn: () => paymentsApi.listPayments({ invoice_id: id }),
     enabled: !!id,
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: () => {
+      if (!id) throw new Error("Missing ID");
+      return invoicesApi.sendInvoiceEmail(id);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      success(`Invoice email dispatched to ${data.recipient}`, "Email Sent");
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || "Failed to send invoice email.", "Email Error");
+    },
   });
 
   const cancelInvoiceMutation = useMutation({
@@ -107,14 +125,39 @@ export const InvoiceDetailsPage: React.FC = () => {
             Print / PDF
           </Button>
 
-          {isOperator && !isPaidInFull && invoice.status !== "CANCELLED" && (
+          {isOperator && invoice.customer?.email && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => sendEmailMutation.mutate()}
+              disabled={sendEmailMutation.isPending}
+              className="gap-1.5 text-indigo-600 hover:bg-indigo-50"
+            >
+              <Mail className="w-4 h-4" />
+              {sendEmailMutation.isPending ? "Sending..." : "Email Invoice"}
+            </Button>
+          )}
+
+          {!isPaidInFull && invoice.status !== "CANCELLED" && (
             <Button
               size="sm"
+              onClick={() => setIsDemoModalOpen(true)}
+              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 font-bold"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Pay via Demo Gateway
+            </Button>
+          )}
+
+          {isOperator && !isPaidInFull && invoice.status !== "CANCELLED" && (
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsPaymentModalOpen(true)}
-              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+              className="gap-1.5 border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             >
               <IndianRupee className="w-4 h-4" />
-              Record Payment
+              Record Manual Payment
             </Button>
           )}
 
@@ -346,6 +389,18 @@ export const InvoiceDetailsPage: React.FC = () => {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         invoice={invoice}
+      />
+
+      <DemoPaymentModal
+        invoiceId={invoice.id}
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onPaymentSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+          queryClient.invalidateQueries({ queryKey: ["invoice-payments", id] });
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+        }}
       />
     </div>
   );

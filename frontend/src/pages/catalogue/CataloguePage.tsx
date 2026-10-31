@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { plansApi } from "@/api/plans";
-import { productsApi } from "@/api/products";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { SubscriptionPlan, BillingInterval } from "@/types";
+import { SubscriptionPlan } from "@/types";
 import { SubscriptionCreateModal } from "@/pages/subscriptions/SubscriptionCreateModal";
 import { RequestQuotationModal } from "./RequestQuotationModal";
 import {

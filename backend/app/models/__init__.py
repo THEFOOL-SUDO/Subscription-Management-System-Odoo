@@ -31,6 +31,14 @@ from app.models.invoice import (
     InvoiceItem,
 )
 from app.models.payment import Payment, PaymentMethod
+from app.models.quotation import QuotationTemplate, QuotationTemplateItem
+from app.models.discount import DiscountRule, DiscountType, DiscountScope
+from app.models.tax import TaxRule
+from app.models.payment_transaction import (
+    PaymentTransaction,
+    PaymentTransactionStatus,
+    PaymentProvider,
+)
 
 __all__ = [
     "Base",
@@ -63,4 +71,13 @@ __all__ = [
     "InvoiceItem",
     "Payment",
     "PaymentMethod",
+    "QuotationTemplate",
+    "QuotationTemplateItem",
+    "DiscountRule",
+    "DiscountType",
+    "DiscountScope",
+    "TaxRule",
+    "PaymentTransaction",
+    "PaymentTransactionStatus",
+    "PaymentProvider",
 ]
